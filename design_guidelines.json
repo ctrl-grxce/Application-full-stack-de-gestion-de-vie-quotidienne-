@@ -1,0 +1,92 @@
+{
+  "app_name": "LifeOS",
+  "description": "An ultimate life management, productivity, and budget tracking application with Notion-like intuitive design, Apple's smoothness, and Anthropic's clean agentic AI interface.",
+  "domain": "Productivity, Organization, Finance SaaS",
+  "theme": "Light & Dark with toggle",
+  "archetype": "Archetype 1: Organic & Earthy (Beige/Cream base, grounded, calm) combined with Archetype 4 (Swiss & High-Contrast) for structural clarity and high-contrast typography.",
+  "colors": {
+    "light": {
+      "background": "#FDFCF9",
+      "surface": "#FFFFFF",
+      "surface_secondary": "#F5F3EC",
+      "border": "#EBE8E0",
+      "text_primary": "#1A1918",
+      "text_secondary": "#6B6965",
+      "primary": "#1A1918",
+      "primary_foreground": "#FFFFFF",
+      "ai_accent": "#D17A58",
+      "ai_accent_surface": "#FFF7F4",
+      "success": "#4A7A59",
+      "danger": "#B85C5C"
+    },
+    "dark": {
+      "background": "#121110",
+      "surface": "#1C1918",
+      "surface_secondary": "#262321",
+      "border": "#292623",
+      "text_primary": "#F4F3F0",
+      "text_secondary": "#9E9C98",
+      "primary": "#F4F3F0",
+      "primary_foreground": "#121110",
+      "ai_accent": "#E28B6B",
+      "ai_accent_surface": "#3A241B",
+      "success": "#5C966E",
+      "danger": "#CF6666"
+    }
+  },
+  "typography": {
+    "headings_font": "Manrope",
+    "body_font": "Figtree",
+    "mono_font": "JetBrains Mono",
+    "strategy": "High contrast typesetting. Use tracking-tight for Manrope headings. Overlines should be uppercase with tracking-[0.2em] in Figtree.",
+    "hierarchy": {
+      "h1": "text-4xl sm:text-5xl tracking-tight font-bold",
+      "h2": "text-2xl sm:text-3xl tracking-tight font-semibold",
+      "h3": "text-xl sm:text-2xl font-medium",
+      "h4": "text-lg sm:text-xl font-medium",
+      "body": "text-base leading-relaxed",
+      "small": "text-sm text-secondary"
+    }
+  },
+  "layout_strategy": {
+    "general": "Generous Spacing Philosophy. Use large padding (p-8 to p-12) for outer containers. Containers with borders must have internal padding (p-6) to prevent text collision. Mobile-first responsive.",
+    "dashboard_grid": "MODE B: THE CONTROL ROOM GRID. Dense and compact for widgets, gap-6. Spans: Summary col-span-1, Main chart col-span-2 or 3.",
+    "borders_and_radius": "Subtle roundness. Maximum 8px (rounded-lg) for cards and modals. Use 1px solid borders rather than heavy shadows to delineate space (Notion-style)."
+  },
+  "components": {
+    "buttons": "Flat design. Primary buttons use background color, no shadow. Hover state: slightly lighter/darker hue with text color explicitly set.",
+    "inputs": "Shadcn based. Use 1px border, transparent background, focus-visible:ring-1 focus-visible:ring-primary.",
+    "cards": "Cardless or flat cards. 1px border border-border/60, bg-surface. No default shadow. Hover: shadow-sm.",
+    "calendar": "Custom grid layout leveraging pure HTML/Tailwind for month/week/day views. Use Shadcn for internal controls (date picker). Clean time-blocks.",
+    "kanban": "Horizontal scrolling flex container. Columns with muted backgrounds, draggable cards with 1px borders.",
+    "ai_chat": "Claude/Anthropic style. Agentic chat workflow with collapsible tool-calls. Live preview pane. User messages are right-aligned or styled distinctly, AI messages are left-aligned with a subtle ai_accent_surface background.",
+    "icons": "lucide-react for universal, clean, mono-weight iconography.",
+    "testing": "All interactive elements MUST have data-testid attributes (kebab-case, role-based)."
+  },
+  "motion_and_interactions": {
+    "hover": "Explicit hover states on all interactive elements (e.g. hover:bg-surface_secondary).",
+    "transitions": "Subtle and fast. transition-colors duration-200 ease-in-out.",
+    "active": "Active/Focus states must have high contrast rings.",
+    "animations": "Micro-interactions for task completion (e.g. strikethrough animation, small scale-down on click)."
+  },
+  "media_urls": {
+    "user_avatar": {
+      "url": "https://images.unsplash.com/photo-1740252117013-4fb21771e7ca?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NDQ2Mzl8MHwxfHNlYXJjaHwzfHxwcm9mZXNzaW9uYWwlMjB1c2VyJTIwYXZhdGFyJTIwcG9ydHJhaXR8ZW58MHx8fHwxNzgxNDI1ODM3fDA&ixlib=rb-4.1.0&q=85",
+      "description": "3D cartoon avatar for user profile"
+    },
+    "background_texture": {
+      "url": "https://images.unsplash.com/photo-1714636608872-048fc9231892?crop=entropy&cs=srgb&fm=jpg&ixid=M3w3NTY2ODh8MHwxfHNlYXJjaHwxfHxtaW5pbWFsaXN0JTIwYmVpZ2UlMjBhYnN0cmFjdCUyMHRleHR1cmV8ZW58MHx8fHwxNzgxNDI1ODM3fDA&ixlib=rb-4.1.0&q=85",
+      "description": "Minimalist beige abstract texture for empty states or subtle hero backgrounds"
+    }
+  },
+  "instructions_to_main_agent": [
+    "Build a Notion-like sidebar navigation with collapsible sections.",
+    "Implement a light/dark mode toggle affecting the Tailwind classes at the root.",
+    "Use standard HTML/Tailwind for custom layouts (like Kanban or multi-view Calendar), do not over-rely on rigid Shadcn structural components.",
+    "For the budget AI component, build a side-panel or inline conversational interface styled like Anthropic's Claude (clean, readable text, subtle AI accents, conversational loops).",
+    "Currency must be hardcoded or formatted as Euro (€).",
+    "Use 'Manrope' for headings and 'Figtree' for body text. Configure these in Tailwind config.",
+    "Ensure all buttons, inputs, and links have 'data-testid' attributes.",
+    "Layout should utilize a high-density dashboard grid for tracking views but maintain plenty of padding and whitespace within the containers."
+  ]
+}
