@@ -40,3 +40,15 @@ Design smooth & épuré type Notion / Anthropic.
 
 ## Next Tasks
 - Drag & drop Kanban/tasks, recurring events, savings goals + AI monthly forecast.
+
+## Update 2026-06-14 (itération 2) — Répartition budget & gestion projets
+- Budget > onglet **Répartition** : enveloppes mensuelles par catégorie (limite vs dépensé, barre de progression colorée, alerte dépassement, suggestions pour catégories sans enveloppe).
+- **Objectifs d'épargne** : création (cible, échéance, couleur), contribution +/−, progression.
+- L'IA conseillère intègre désormais enveloppes + objectifs dans ses conseils.
+- **Projets** : date limite (carte + en-tête tableau), **glisser-déposer** natif des cartes Kanban, **sous-tâches** (checklist) avec progression affichée sur la carte.
+- Backend : /api/budgets (CRUD idempotent par catégorie), /api/budget/allocation, /api/goals (CRUD + /contribute), ProjectTask.subtasks, Project.due_date. Tests 17/17.
+
+## Backlog restant
+- P2 : persister le projet ouvert dans l'URL (/projects/:id) pour survivre au refresh.
+- P2 : DialogDescription sur les modales (a11y), export CSV, budgets récurrents auto.
+
