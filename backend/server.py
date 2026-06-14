@@ -265,6 +265,13 @@ class ProjectInput(BaseModel):
     description: Optional[str] = ""
     color: str = "#4A7A59"
     status: Literal["active", "on_hold", "completed"] = "active"
+    due_date: Optional[str] = None
+
+
+class SubTask(BaseModel):
+    id: str
+    title: str
+    done: bool = False
 
 
 class ProjectTaskInput(BaseModel):
@@ -273,6 +280,7 @@ class ProjectTaskInput(BaseModel):
     status: Literal["todo", "in_progress", "review", "done"] = "todo"
     priority: Literal["low", "medium", "high"] = "medium"
     due_date: Optional[str] = None
+    subtasks: List[SubTask] = []
 
 
 class TransactionInput(BaseModel):
@@ -285,6 +293,23 @@ class TransactionInput(BaseModel):
 
 class AIChatInput(BaseModel):
     message: str
+
+
+class BudgetInput(BaseModel):
+    category: str
+    limit: float
+
+
+class GoalInput(BaseModel):
+    name: str
+    target: float
+    current: float = 0.0
+    deadline: Optional[str] = None
+    color: str = "#4A7A59"
+
+
+class ContributeInput(BaseModel):
+    amount: float
 
 
 def new_id() -> str:
@@ -489,6 +514,134 @@ async def budget_summary(user: dict = Depends(get_current_user)):
     }
 
 
+# ---- Budget allocations (enveloppes par catégorie, mensuel) ----
+@api_router.get("/budgets")
+async def list_budgets(user: dict = Depends(get_current_user)):
+    items = await db.budgets.find({"user_id": user["user_id"]}, {"_id": 0}).to_list(200)
+    return items
+
+
+@api_router.post("/budgets")
+async def create_budget(input: BudgetInput, user: dict = Depends(get_current_user)):
+    existing = await db.budgets.find_one({"user_id": user["user_id"], "category": input.category})
+    if existing:
+        await db.budgets.update_one(
+            {"user_id": user["user_id"], "category": input.category},
+            {"$set": {"limit": input.limit}},
+        )
+        doc = await db.budgets.find_one({"id": existing["id"]}, {"_id": 0})
+        return doc
+    doc = {"id": new_id(), "user_id": user["user_id"], "category": input.category,
+           "limit": input.limit, "created_at": now_utc().isoformat()}
+    await db.budgets.insert_one(doc)
+    doc.pop("_id", None)
+    return doc
+
+
+@api_router.put("/budgets/{budget_id}")
+async def update_budget(budget_id: str, input: BudgetInput, user: dict = Depends(get_current_user)):
+    res = await db.budgets.update_one(
+        {"id": budget_id, "user_id": user["user_id"]},
+        {"$set": {"category": input.category, "limit": input.limit}},
+    )
+    if res.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Enveloppe introuvable")
+    return await db.budgets.find_one({"id": budget_id}, {"_id": 0})
+
+
+@api_router.delete("/budgets/{budget_id}")
+async def delete_budget(budget_id: str, user: dict = Depends(get_current_user)):
+    await db.budgets.delete_one({"id": budget_id, "user_id": user["user_id"]})
+    return {"ok": True}
+
+
+@api_router.get("/budget/allocation")
+async def budget_allocation(user: dict = Depends(get_current_user)):
+    uid = user["user_id"]
+    month = now_utc().date().isoformat()[:7]
+    budgets = await db.budgets.find({"user_id": uid}, {"_id": 0}).to_list(200)
+    txs = await db.transactions.find({"user_id": uid}, {"_id": 0}).to_list(5000)
+
+    spent_by_cat = defaultdict(float)
+    income_month = 0.0
+    for t in txs:
+        if (t.get("date") or "")[:7] == month:
+            if t["type"] == "expense":
+                spent_by_cat[t["category"]] += t["amount"]
+            else:
+                income_month += t["amount"]
+
+    items = []
+    total_limit = 0.0
+    total_spent = 0.0
+    for b in budgets:
+        spent = round(spent_by_cat.get(b["category"], 0.0), 2)
+        total_limit += b["limit"]
+        total_spent += spent
+        items.append({
+            "id": b["id"], "category": b["category"], "limit": b["limit"],
+            "spent": spent, "remaining": round(b["limit"] - spent, 2),
+            "pct": round((spent / b["limit"] * 100) if b["limit"] else 0, 1),
+        })
+    items.sort(key=lambda x: -x["pct"])
+
+    # catégories dépensées sans enveloppe définie
+    budgeted = {b["category"] for b in budgets}
+    unbudgeted = [
+        {"category": c, "spent": round(v, 2)}
+        for c, v in sorted(spent_by_cat.items(), key=lambda x: -x[1]) if c not in budgeted
+    ]
+
+    return {
+        "month": month,
+        "items": items,
+        "unbudgeted": unbudgeted,
+        "total_limit": round(total_limit, 2),
+        "total_spent": round(total_spent, 2),
+        "income_month": round(income_month, 2),
+    }
+
+
+# ---- Objectifs d'épargne ----
+@api_router.get("/goals")
+async def list_goals(user: dict = Depends(get_current_user)):
+    items = await db.goals.find({"user_id": user["user_id"]}, {"_id": 0}).sort("created_at", -1).to_list(200)
+    return items
+
+
+@api_router.post("/goals")
+async def create_goal(input: GoalInput, user: dict = Depends(get_current_user)):
+    doc = {"id": new_id(), "user_id": user["user_id"], **input.model_dump(),
+           "created_at": now_utc().isoformat()}
+    await db.goals.insert_one(doc)
+    doc.pop("_id", None)
+    return doc
+
+
+@api_router.put("/goals/{goal_id}")
+async def update_goal(goal_id: str, input: GoalInput, user: dict = Depends(get_current_user)):
+    res = await db.goals.update_one({"id": goal_id, "user_id": user["user_id"]}, {"$set": input.model_dump()})
+    if res.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Objectif introuvable")
+    return await db.goals.find_one({"id": goal_id}, {"_id": 0})
+
+
+@api_router.post("/goals/{goal_id}/contribute")
+async def contribute_goal(goal_id: str, input: ContributeInput, user: dict = Depends(get_current_user)):
+    goal = await db.goals.find_one({"id": goal_id, "user_id": user["user_id"]})
+    if not goal:
+        raise HTTPException(status_code=404, detail="Objectif introuvable")
+    new_current = max(0.0, round(goal.get("current", 0) + input.amount, 2))
+    await db.goals.update_one({"id": goal_id}, {"$set": {"current": new_current}})
+    return await db.goals.find_one({"id": goal_id}, {"_id": 0})
+
+
+@api_router.delete("/goals/{goal_id}")
+async def delete_goal(goal_id: str, user: dict = Depends(get_current_user)):
+    await db.goals.delete_one({"id": goal_id, "user_id": user["user_id"]})
+    return {"ok": True}
+
+
 async def build_budget_context(user_id: str) -> str:
     txs = await db.transactions.find({"user_id": user_id}, {"_id": 0}).to_list(5000)
     total_income = sum(t["amount"] for t in txs if t["type"] == "income")
@@ -507,6 +660,31 @@ async def build_budget_context(user_id: str) -> str:
         f"{m}: revenus {round(v['income'], 2)}€ / dépenses {round(v['expense'], 2)}€"
         for m, v in sorted(monthly.items())
     ) or "aucun historique"
+
+    month = now_utc().date().isoformat()[:7]
+    budgets = await db.budgets.find({"user_id": user_id}, {"_id": 0}).to_list(200)
+    spent_month = defaultdict(float)
+    for t in txs:
+        if (t.get("date") or "")[:7] == month and t["type"] == "expense":
+            spent_month[t["category"]] += t["amount"]
+    if budgets:
+        env_str = "; ".join(
+            f"{b['category']}: {round(spent_month.get(b['category'], 0), 2)}€ dépensés / {b['limit']}€ alloués"
+            for b in budgets
+        )
+    else:
+        env_str = "aucune enveloppe définie"
+
+    goals = await db.goals.find({"user_id": user_id}, {"_id": 0}).to_list(200)
+    if goals:
+        goals_str = "; ".join(
+            f"{g['name']}: {round(g.get('current', 0), 2)}€ / {g['target']}€"
+            + (f" (échéance {g['deadline']})" if g.get("deadline") else "")
+            for g in goals
+        )
+    else:
+        goals_str = "aucun objectif d'épargne"
+
     return (
         f"Données financières de l'utilisateur (devise: EUR €):\n"
         f"- Revenus totaux: {round(total_income, 2)}€\n"
@@ -515,6 +693,8 @@ async def build_budget_context(user_id: str) -> str:
         f"- Nombre de transactions: {len(txs)}\n"
         f"- Dépenses par catégorie: {cat_str}\n"
         f"- Évolution mensuelle: {trend_str}\n"
+        f"- Enveloppes budgétaires du mois ({month}): {env_str}\n"
+        f"- Objectifs d'épargne: {goals_str}\n"
     )
 
 
@@ -613,7 +793,7 @@ async def startup():
     await db.users.create_index("email", unique=True)
     await db.users.create_index("user_id")
     await db.user_sessions.create_index("session_token")
-    for coll in ["tasks", "events", "projects", "project_tasks", "transactions"]:
+    for coll in ["tasks", "events", "projects", "project_tasks", "transactions", "budgets", "goals"]:
         await db[coll].create_index("user_id")
 
     admin_email = os.environ.get("ADMIN_EMAIL", "demo@lifeos.app").lower()

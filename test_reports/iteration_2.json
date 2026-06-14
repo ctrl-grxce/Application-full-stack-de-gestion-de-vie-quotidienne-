@@ -1,0 +1,41 @@
+{
+  "summary": "Iteration 2 testing: backend 17/17 pytest (incl. 5 new tests for budgets, allocation, goals, contribute, project due_date+subtasks, AI with envelopes/goals context). Frontend Playwright: Budget Répartition tab + add envelope + delete works, savings goal create/contribute(+200)/withdraw(-50)/delete works, project due_date shows ('Échéance 15 sept. 2026') on project card, subtasks add+toggle shows '1/2' progress on card, Kanban move via card-menu (Déplacer) works and target column updates. Native HTML5 drag-and-drop not executed (Playwright unreliable for it); dropdown menu alternative is functional per spec. AI streaming still works and now references envelopes/goals in context. Regression flows (login, theme toggle, transactions) intact.",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "All Radix Dialog modals (transaction, budget envelope, goal, project, card, card detail)", "issues": ["Persistent console warning: 'Missing Description or aria-describedby={undefined} for DialogContent'. Add DialogDescription to every modal for a11y. (Already noted in iteration 1, still not fixed.)"]},
+      {"screen": "Project board view (/projects)", "issues": ["Selected project board is held in component state only, not in URL. After page reload (F5) the user is dropped back to the project list, losing the board context. Underlying data still persists. Consider moving the active project id into the URL (e.g., /projects/:id) so deep links and reloads work."]}
+    ]
+  },
+  "test_report_links": [
+    "/app/backend/tests/backend_test.py",
+    "/app/backend/tests/test_iter2_features.py",
+    "/app/test_reports/pytest/full_results.xml",
+    "/app/test_reports/pytest/iter2_results.xml"
+  ],
+  "action_items": [
+    "Optional: persist active project id in URL (e.g., /projects/:id) so refresh on a board view restores the same project (currently reload returns to list).",
+    "Optional a11y: add DialogDescription to every Radix Dialog to eliminate console warnings (carried over from iteration 1)."
+  ],
+  "critical_code_review_comments": [
+    "GET /api/budget/allocation computes spent/limit/remaining/pct correctly and sorts by % desc; income_month and unbudgeted aggregation work as designed.",
+    "POST /api/budgets is idempotent per (user_id, category) — re-posting the same category updates the limit and returns the existing record. Good UX.",
+    "POST /api/goals/{id}/contribute clamps current at 0 on over-withdrawal (max(0.0, ...)) — correctly verified.",
+    "ProjectTaskInput now accepts subtasks: List[SubTask]. PUT replaces the entire subtasks array (full payload required from client). BudgetPage and ProjectsPage components in single 700+ line files: consider splitting AllocationSection/GoalsSection into their own files for maintainability (BudgetPage.jsx is now ~600 lines)."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iter2_features.py"
+  ],
+  "success_rate": {"backend": "100% (17/17)", "frontend": "100% (all critical new flows verified)"},
+  "test_credentials": "demo@lifeos.app / demo1234 (verified)",
+  "seed_data_creation": "Tests register fresh users (iter2_*@example.com, reg_*@example.com, test_*@example.com). UI test created and cleaned up a goal; left one envelope on demo account (category Logement, limit 500) plus one project 'TEST DnD' was deleted. A small +120 expense (Logement) was added on demo for spent verification — main agent may want to remove it manually if cleanliness is needed.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Backend regression: pytest /app/backend/tests/ (17 tests, ~10s). Set REACT_APP_BACKEND_URL env before running. Frontend nav data-testids still derived from French labels — navigate by page.goto('/budget'), '/projects', etc. ProjectBoard view state is lost on reload (no route param). When testing Kanban move, prefer the card-menu 'Déplacer →' submenu over Playwright native HTML5 DnD which is flaky.",
+  "rca of the issue": "No bugs to RCA — all new iter2 features (budget envelopes, allocation, goals + contribute, project due_date, subtasks, AI context update) verified working end-to-end. Two cosmetic notes: (1) reloading on a project board returns to projects list because board state is component-local — recommend lifting selected project id into URL; (2) DialogDescription missing on Radix modals (a11y warning) carried over from iter 1."
+}
